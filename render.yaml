@@ -1,0 +1,35 @@
+# Render.com blueprint — free Docker web service for the NestJS API.
+# Deploy: push this repo to GitHub, then Render → New → Blueprint → pick the repo.
+# IMPORTANT: set DATABASE_URL to the Supabase **Session Pooler** string (IPv4),
+# NOT the direct db.<ref>.supabase.co host (that host is IPv6-only and is
+# unreachable from Render).  Dashboard → Database → Connection string →
+# "Session pooler" (port 5432).
+services:
+  - type: web
+    name: fabcc-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # set in dashboard — Supabase Session Pooler URL (IPv4)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        value: https://rbkkawrqglewlvtnqhqr.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false # paste the service_role key in the dashboard
+      - key: SUPABASE_BUCKET
+        value: fabcc-media
+      - key: FAB_TEAM_ID
+        value: "7544665"
+      - key: PLAYER_DEFAULT_PASSWORD
+        value: "123"
