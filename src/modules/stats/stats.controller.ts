@@ -12,6 +12,11 @@ export class StatsController {
     return this.stats.playerStats(id, since ? new Date(since) : undefined);
   }
 
+  @Get('players/:id/analytics')
+  playerAnalytics(@Param('id') id: string, @Query('since') since?: string) {
+    return this.stats.playerAnalytics(id, since ? new Date(since) : undefined);
+  }
+
   @Get('matches')
   matches() {
     return this.stats.listMatches();
