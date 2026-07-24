@@ -1,4 +1,6 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
+import {
+  ArrayMaxSize, ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString, MaxLength,
+} from 'class-validator';
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CommentaryService } from './commentary.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -13,6 +15,9 @@ class UploadJsonDto {
   // One or two raw CricHeroes commentary JSON strings (1st + 2nd innings).
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(2) @IsString({ each: true })
   files: string[];
+
+  // Optional opponent team name — the JSON exports don't include it.
+  @IsOptional() @IsString() @MaxLength(80) opponent?: string;
 }
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,6 +33,6 @@ export class CommentaryController {
 
   @Post('upload-json')
   uploadJson(@Body() dto: UploadJsonDto) {
-    return this.service.ingestJson(dto.files);
+    return this.service.ingestJson(dto.files, dto.opponent);
   }
 }

@@ -35,11 +35,18 @@ export class CommentaryService {
    * are normalised to the same shape as text commentary and run through the
    * identical persistence + stats + ranking pipeline.
    */
-  async ingestJson(files: string[]) {
+  async ingestJson(files: string[], opponent?: string) {
     const roots = files.map((f) => JSON.parse(f));
     const parsed = this.cricheroes.parse(roots);
     if (!parsed.innings.length) {
       throw new Error('No innings found in the uploaded files.');
+    }
+    // CricHeroes commentary exports don't carry the opponent's team name, so let
+    // the admin supply it; fall back to the parser's "Opponent" placeholder.
+    const name = opponent?.trim();
+    if (name) {
+      parsed.opponent = name;
+      parsed.title = `FAB CC vs ${name}`;
     }
     return this.persist(parsed, JSON.stringify(roots).slice(0, 1_000_000));
   }

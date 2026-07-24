@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, ForbiddenException, Get, Param, Post, Query, Req, UseGuards,
+  Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards,
 } from '@nestjs/common';
 import { TrainingType } from '@prisma/client';
 import {
@@ -13,6 +13,16 @@ class CreateTrainingDto {
   @IsInt() @Min(1) durationMin: number;
   @IsEnum(TrainingType) type: TrainingType;
   @IsInt() @Min(1) @Max(10) intensity: number;
+  @IsOptional() @IsString() notes?: string;
+  @IsOptional() @IsString() coach?: string;
+  @IsOptional() @IsArray() mediaUrls?: string[];
+}
+
+class UpdateTrainingDto {
+  @IsOptional() @IsDateString() date?: string;
+  @IsOptional() @IsInt() @Min(1) durationMin?: number;
+  @IsOptional() @IsEnum(TrainingType) type?: TrainingType;
+  @IsOptional() @IsInt() @Min(1) @Max(10) intensity?: number;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsString() coach?: string;
   @IsOptional() @IsArray() mediaUrls?: string[];
@@ -39,10 +49,31 @@ export class TrainingController {
     return this.training.list(target, since ? new Date(since) : undefined);
   }
 
+  // Cursor-paginated logs for lazy-loading lists (admin can pass any playerId).
+  @Get('paged')
+  paged(
+    @Req() req: any,
+    @Query('playerId') playerId?: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const target = req.user.role === 'ADMIN' && playerId ? playerId : this.playerId(req);
+    return this.training.listPaged(target, { cursor, limit: limit ? Number(limit) : undefined });
+  }
+
   @Get('summary')
   summary(@Req() req: any, @Query('playerId') playerId?: string) {
     const target = req.user.role === 'ADMIN' && playerId ? playerId : this.playerId(req);
     return this.training.summary(target);
+  }
+
+  @Patch(':id')
+  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateTrainingDto) {
+    const { date, ...rest } = dto;
+    return this.training.update(id, this.playerId(req), {
+      ...rest,
+      ...(date ? { date: new Date(date) } : {}),
+    });
   }
 
   @Delete(':id')

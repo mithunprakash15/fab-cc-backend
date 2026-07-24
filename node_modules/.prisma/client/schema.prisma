@@ -381,10 +381,12 @@ enum RankingPeriod {
 }
 
 model RankingConfig {
+  // Overall rating = performance*35% + training*40% + adminMarks*25%.
+  // Training folds in sessions (type-weighted), attendance and exercise.
   id                String @id @default("default")
-  processWeight     Float  @default(0.6)
-  performanceWeight Float  @default(0.3)
-  improvementWeight Float  @default(0.1)
+  performanceWeight Float  @default(0.35)
+  trainingWeight    Float  @default(0.4)
+  adminWeight       Float  @default(0.25)
 }
 
 model RankingSnapshot {
@@ -393,9 +395,12 @@ model RankingSnapshot {
   player           Player        @relation(fields: [playerId], references: [id])
   period           RankingPeriod
   periodStart      DateTime
+  // processScore kept for backward-compat; mirrors trainingScore.
   processScore     Float
   performanceScore Float
-  improvementScore Float
+  trainingScore    Float         @default(0)
+  adminScore       Float         @default(0)
+  improvementScore Float // trend, retained for the "most-improved" board
   overallRating    Float
   battingScore     Float         @default(0)
   bowlingScore     Float         @default(0)

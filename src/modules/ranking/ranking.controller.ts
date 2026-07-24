@@ -7,9 +7,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 class WeightsDto {
-  @IsNumber() @Min(0) @Max(1) processWeight: number;
   @IsNumber() @Min(0) @Max(1) performanceWeight: number;
-  @IsNumber() @Min(0) @Max(1) improvementWeight: number;
+  @IsNumber() @Min(0) @Max(1) trainingWeight: number;
+  @IsNumber() @Min(0) @Max(1) adminWeight: number;
 }
 
 @UseGuards(JwtAuthGuard, RolesGuard)

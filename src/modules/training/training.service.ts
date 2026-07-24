@@ -16,6 +16,19 @@ export class TrainingService {
     });
   }
 
+  async update(
+    id: string,
+    playerId: string,
+    data: Partial<{
+      date: Date; durationMin: number; type: TrainingType; intensity: number;
+      notes: string | null; coach: string | null; mediaUrls: string[];
+    }>,
+  ) {
+    const log = await this.prisma.trainingLog.findUniqueOrThrow({ where: { id } });
+    if (log.playerId !== playerId) throw new ForbiddenException('Not your log');
+    return this.prisma.trainingLog.update({ where: { id }, data });
+  }
+
   async remove(id: string, playerId: string) {
     const log = await this.prisma.trainingLog.findUniqueOrThrow({ where: { id } });
     if (log.playerId !== playerId) throw new ForbiddenException('Not your log');
@@ -27,6 +40,20 @@ export class TrainingService {
       where: { playerId, ...(since ? { date: { gte: since } } : {}) },
       orderBy: { date: 'desc' },
     });
+  }
+
+  /** Cursor-paginated logs (newest first) for lazy-loading lists. */
+  async listPaged(playerId: string, opts: { cursor?: string; limit?: number } = {}) {
+    const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
+    const rows = await this.prisma.trainingLog.findMany({
+      where: { playerId },
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
+      take: limit + 1, // fetch one extra to detect another page
+      ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+    });
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    return { items, nextCursor: hasMore ? items[items.length - 1].id : null };
   }
 
   /** Weekly / monthly / yearly totals, consistency, and streaks. */

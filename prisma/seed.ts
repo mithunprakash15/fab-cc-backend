@@ -16,8 +16,8 @@ async function main() {
   });
   await prisma.rankingConfig.upsert({
     where: { id: 'default' },
-    update: {},
-    create: { id: 'default', processWeight: 0.6, performanceWeight: 0.3, improvementWeight: 0.1 },
+    update: { performanceWeight: 0.35, trainingWeight: 0.4, adminWeight: 0.25 },
+    create: { id: 'default', performanceWeight: 0.35, trainingWeight: 0.4, adminWeight: 0.25 },
   });
   console.log(`Seeded admin (${adminEmail}) and default ranking config.`);
 }
