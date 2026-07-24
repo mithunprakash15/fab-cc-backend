@@ -23,4 +23,10 @@ COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+# Sync the DB schema to prisma/schema.prisma on boot. This project uses `db push`
+# (not migration files), so a code deploy that adds columns must also push, or
+# every query selecting the new columns 500s. Idempotent — a no-op once the DB
+# matches. --accept-data-loss is required for non-interactive column drops (only
+# ever the RankingConfig weight columns; player/match/training data is untouched).
+# On failure we still start so a transient DB blip doesn't take the API down.
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss || echo 'prisma db push failed; starting anyway'; node dist/main.js"]
