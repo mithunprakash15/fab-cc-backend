@@ -64,6 +64,32 @@ export class RankingService {
     await this.recompute();
   }
 
+  private recomputing = false;
+  private recomputeQueued = false;
+
+  /**
+   * Fire-and-forget recompute for after a data write (a logged session, edited
+   * training, new discipline marks…), so points update without waiting for the
+   * nightly job. Coalesces bursts: if one is already running, a single re-run is
+   * queued for when it finishes. Never rejects into the caller's request.
+   */
+  recomputeSoon(period: RankingPeriod = RankingPeriod.WEEKLY) {
+    if (this.recomputing) {
+      this.recomputeQueued = true;
+      return;
+    }
+    this.recomputing = true;
+    void this.recompute(period)
+      .catch((e) => this.logger.error(`Background recompute failed: ${e}`))
+      .finally(() => {
+        this.recomputing = false;
+        if (this.recomputeQueued) {
+          this.recomputeQueued = false;
+          this.recomputeSoon(period);
+        }
+      });
+  }
+
   /**
    * Config weights, falling back to the 35/40/25 defaults if the row is missing
    * or doesn't sum to ~1. The latter guards the `prisma db push` upgrade, where

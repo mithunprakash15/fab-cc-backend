@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { startOfWeek } from 'date-fns';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RankingService } from '../ranking/ranking.service';
 
 export interface DisciplineInput {
   playerId: string;
@@ -24,6 +25,7 @@ export class DisciplineService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private ranking: RankingService,
   ) {}
 
   async score(input: DisciplineInput) {
@@ -37,6 +39,9 @@ export class DisciplineService {
       create: { playerId, weekStart, ...scores },
       update: scores,
     });
+
+    // Admin marks are 25% of the overall rating — refresh the standings now.
+    this.ranking.recomputeSoon();
 
     const player = await this.prisma.player.findUnique({
       where: { id: playerId }, include: { user: true },

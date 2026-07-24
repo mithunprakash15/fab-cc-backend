@@ -1,24 +1,32 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { differenceInCalendarDays, startOfMonth, startOfWeek } from 'date-fns';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RankingService } from '../ranking/ranking.service';
 
 @Injectable()
 export class ExerciseService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ranking: RankingService,
+  ) {}
 
-  create(playerId: string, data: {
+  async create(playerId: string, data: {
     date: string; activity: string; durationMin: number;
     distanceKm?: number; calories?: number; notes?: string;
   }) {
-    return this.prisma.exerciseLog.create({
+    const log = await this.prisma.exerciseLog.create({
       data: { ...data, playerId, date: new Date(data.date) },
     });
+    this.ranking.recomputeSoon(); // exercise feeds the training bucket
+    return log;
   }
 
   async remove(id: string, playerId: string) {
     const log = await this.prisma.exerciseLog.findUniqueOrThrow({ where: { id } });
     if (log.playerId !== playerId) throw new ForbiddenException('Not your log');
-    return this.prisma.exerciseLog.delete({ where: { id } });
+    const deleted = await this.prisma.exerciseLog.delete({ where: { id } });
+    this.ranking.recomputeSoon();
+    return deleted;
   }
 
   list(playerId: string, since?: Date) {

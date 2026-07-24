@@ -2,18 +2,24 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { TrainingType } from '@prisma/client';
 import { differenceInCalendarDays, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RankingService } from '../ranking/ranking.service';
 
 @Injectable()
 export class TrainingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ranking: RankingService,
+  ) {}
 
-  create(playerId: string, data: {
+  async create(playerId: string, data: {
     date: string; durationMin: number; type: TrainingType; intensity: number;
     notes?: string; coach?: string; mediaUrls?: string[];
   }) {
-    return this.prisma.trainingLog.create({
+    const log = await this.prisma.trainingLog.create({
       data: { ...data, playerId, date: new Date(data.date), mediaUrls: data.mediaUrls ?? [] },
     });
+    this.ranking.recomputeSoon(); // reflect the new session in the standings
+    return log;
   }
 
   async update(
@@ -26,13 +32,17 @@ export class TrainingService {
   ) {
     const log = await this.prisma.trainingLog.findUniqueOrThrow({ where: { id } });
     if (log.playerId !== playerId) throw new ForbiddenException('Not your log');
-    return this.prisma.trainingLog.update({ where: { id }, data });
+    const updated = await this.prisma.trainingLog.update({ where: { id }, data });
+    this.ranking.recomputeSoon();
+    return updated;
   }
 
   async remove(id: string, playerId: string) {
     const log = await this.prisma.trainingLog.findUniqueOrThrow({ where: { id } });
     if (log.playerId !== playerId) throw new ForbiddenException('Not your log');
-    return this.prisma.trainingLog.delete({ where: { id } });
+    const deleted = await this.prisma.trainingLog.delete({ where: { id } });
+    this.ranking.recomputeSoon();
+    return deleted;
   }
 
   list(playerId: string, since?: Date) {
